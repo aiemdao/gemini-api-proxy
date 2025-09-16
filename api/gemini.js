@@ -19,10 +19,20 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { prescription, query } = req.body;
-    const input = prescription || query;  // 👉 chấp nhận cả hai field
+    // ---- Parse body an toàn ----
+    let body = {};
+    try {
+      body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+    } catch (e) {
+      console.error("❌ JSON parse error:", e);
+      return res.status(400).json({ error: "Invalid JSON format" });
+    }
+
+    const { prescription, query } = body;
+    const input = prescription || query;
+
     if (!input) {
-      return res.status(400).json({ error: "Missing input (prescription or query)" });
+      return res.status(400).json({ error: "Missing 'prescription' or 'query' in body" });
     }
 
     // ---- Đọc file RAG ----
