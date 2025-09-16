@@ -1,0 +1,8 @@
+{
+  "name": "gemini-api-proxy",
+  "version": "1.0.0",
+  "main": "api/gemini.js",
+  "dependencies": {
+    "@google/generative-ai": "^0.11.4"
+  }
+}
