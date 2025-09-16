@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 export default async function handler(req, res) {
   // ---- Bật CORS ----
@@ -68,3 +68,4 @@ ${input}
     res.status(500).json({ error: error.message });
   }
 }
+
