@@ -1,33 +1,49 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import fs from "fs";
+import path from "path";
 
 export default async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*"); // cho phép mọi domain gọi API
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-
-  if (req.method === "OPTIONS") {
-    return res.status(200).end(); // Preflight request
-  }
-
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
+  const { prompt } = req.body;
+
   try {
-    const { prompt } = req.body;
+    // 1. Đọc file kiến thức (markdown)
+    const ragPath = path.join(process.cwd(), "data", "DDI_Rheumatology.md");
+    const ragContext = fs.readFileSync(ragPath, "utf8");
 
-    if (!process.env.GEMINI_API_KEY) {
-      throw new Error("Missing GEMINI_API_KEY");
-    }
+    // 2. Ghép context + input người dùng
+    const fullPrompt = `
+Bạn là bác sĩ chuyên ngành Cơ Xương Khớp. 
+Dưới đây là dữ liệu tham chiếu về tương tác thuốc trong Rheumatology:
+---
+${ragContext}
+---
+Nhiệm vụ: phân tích đơn thuốc sau để tìm tương tác thuốc, cảnh báo, khuyến cáo.
+Đơn thuốc:
+${prompt}
+    `;
 
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    // 3. Gọi Gemini API
+    const response = await fetch(
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=" +
+        process.env.GOOGLE_API_KEY,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: fullPrompt }] }],
+        }),
+      }
+    );
 
-    const result = await model.generateContent(prompt);
+    const data = await response.json();
 
-    res.status(200).json({ output: result.response.text() });
-  } catch (error) {
-    console.error("Gemini API error:", error);
-    res.status(500).json({ error: error.message || "Something went wrong" });
+    res
+      .status(200)
+      .json({ output: data.candidates?.[0]?.content?.parts?.[0]?.text || "" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 }
