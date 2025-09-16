@@ -19,9 +19,10 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { query } = req.body;
-    if (!query) {
-      return res.status(400).json({ error: "Missing query" });
+    const { prescription, query } = req.body;
+    const input = prescription || query;  // 👉 chấp nhận cả hai field
+    if (!input) {
+      return res.status(400).json({ error: "Missing input (prescription or query)" });
     }
 
     // ---- Đọc file RAG ----
@@ -33,20 +34,25 @@ export default async function handler(req, res) {
 
     const prompt = `
 Bạn là một trợ lý y khoa.
-Sử dụng dữ liệu tương tác thuốc trong rheumatology sau đây để trả lời.
+Sử dụng dữ liệu tương tác thuốc sau để phân tích đơn thuốc.
 Nếu không tìm thấy thông tin phù hợp, hãy nói "Không có dữ liệu trong tài liệu".
 
 ### Dữ liệu RAG:
 ${ragData}
 
-### Câu hỏi:
-${query}
+### Đơn thuốc bệnh nhân:
+${input}
+
+### Nhiệm vụ:
+- Liệt kê các tương tác thuốc có thể xảy ra.
+- Ghi rõ mức độ (🚨 Nặng / 🚦 Trung bình).
+- Đưa khuyến cáo ngắn gọn.
 `;
 
     const result = await model.generateContent(prompt);
     const text = result.response.text();
 
-    res.status(200).json({ answer: text });
+    res.status(200).json({ analysis: text });
   } catch (error) {
     console.error("❌ Gemini API Error:", error);
     res.status(500).json({ error: error.message });
